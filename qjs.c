@@ -56,8 +56,6 @@ static const int trailer_size = TRAILER_SIZE;
 
 static int qjs__argc;
 static char **qjs__argv;
-
-
 static BOOL is_standalone(const char *exe)
 {
     FILE *exe_f = fopen(exe, "rb");
@@ -224,6 +222,7 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt)
     js_init_module_std(ctx, "qjs:std");
     js_init_module_os(ctx, "qjs:os");
     js_init_module_bjson(ctx, "qjs:bjson");
+    js_init_module_qjs_hello(ctx, "qjs:hello");  // Add this line
 
     JSValue global = JS_GetGlobalObject(ctx);
     JS_SetPropertyFunctionList(ctx, global, global_obj, countof(global_obj));
@@ -747,5 +746,4 @@ start:
     js_std_free_handlers(rt);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
-    return 1;
-}
+    return 1;}

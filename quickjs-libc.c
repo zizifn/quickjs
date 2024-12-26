@@ -4343,3 +4343,29 @@ JSModuleDef *js_init_module_bjson(JSContext *ctx, const char *module_name)
     JS_AddModuleExportList(ctx, m, js_bjson_funcs, countof(js_bjson_funcs));
     return m;
 }
+
+static JSValue js_hello_hello(JSContext *ctx, JSValue this_val,
+                             int argc, JSValue *argv)
+{
+    return JS_NewString(ctx, "Hello from qjs:hello module!");
+}
+
+static const JSCFunctionListEntry js_hello_funcs[] = {
+    JS_CFUNC_DEF("hello", 0, js_hello_hello ),
+};
+
+static int js_hello_init(JSContext *ctx, JSModuleDef *m)
+{
+    return JS_SetModuleExportList(ctx, m, js_hello_funcs,
+                                  countof(js_hello_funcs));
+}
+
+JSModuleDef *js_init_module_qjs_hello(JSContext *ctx, const char *module_name)
+{
+    JSModuleDef *m;
+    m = JS_NewCModule(ctx, module_name, js_hello_init);
+    if (!m)
+        return NULL;
+    JS_AddModuleExportList(ctx, m, js_hello_funcs, countof(js_hello_funcs));
+    return m;
+}
