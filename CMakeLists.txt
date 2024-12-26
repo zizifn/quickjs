@@ -10,6 +10,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_C_STANDARD 11)
 
+
 if(NOT CMAKE_BUILD_TYPE)
     message(STATUS "No build type selected, default to Release")
     set(CMAKE_BUILD_TYPE "Release")
@@ -244,6 +245,30 @@ if(EMSCRIPTEN)
     target_compile_definitions(qjs_wasm PRIVATE ${qjs_defines})
     target_link_libraries(qjs_wasm m)
 endif()
+
+# try to find CURL
+# Add near the top after project declaration
+find_package(CURL REQUIRED)
+
+# Add compile definitions
+add_definitions(-DUSE_CURL)
+
+# Update the quickjs target
+target_include_directories(qjs 
+    PRIVATE 
+    ${CURL_INCLUDE_DIRS}
+)
+
+target_link_libraries(qjs 
+    PRIVATE 
+    ${CURL_LIBRARIES}
+)
+
+# Version check (optional)
+if(CURL_VERSION_STRING VERSION_LESS "7.0.0")
+    message(FATAL_ERROR "Curl version >= 7.0.0 required")
+endif()
+
 
 
 # QuickJS bytecode compiler

@@ -223,6 +223,7 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt)
     js_init_module_os(ctx, "qjs:os");
     js_init_module_bjson(ctx, "qjs:bjson");
     js_init_module_qjs_hello(ctx, "qjs:hello");  // Add this line
+    js_init_module_qjs_fetch(ctx, "qjs:fetch"); 
 
     JSValue global = JS_GetGlobalObject(ctx);
     JS_SetPropertyFunctionList(ctx, global, global_obj, countof(global_obj));
@@ -398,6 +399,11 @@ void help(void)
 
 int main(int argc, char **argv)
 {
+    printf("QuickJS-ng version %s\n", JS_GetVersion());
+    //console argv
+    for (int i = 0; i < argc; i++) {
+        printf("argv[%d] = %s\n", i, argv[i]);
+    }
     JSRuntime *rt;
     JSContext *ctx;
     JSValue ret = JS_UNDEFINED;
@@ -645,6 +651,8 @@ start:
         }
 
         for(i = 0; i < include_count; i++) {
+            // output("include: %s\n", include_list[i]);
+            printf("include: %s\n", include_list[i]);
             if (eval_file(ctx, include_list[i], 0))
                 goto fail;
         }

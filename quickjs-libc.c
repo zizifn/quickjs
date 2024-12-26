@@ -104,6 +104,8 @@ extern char **environ;
 #endif
 #endif
 
+#include <curl/curl.h>
+
 /* TODO:
    - add socket calls
 */
@@ -4347,6 +4349,16 @@ JSModuleDef *js_init_module_bjson(JSContext *ctx, const char *module_name)
 static JSValue js_hello_hello(JSContext *ctx, JSValue this_val,
                              int argc, JSValue *argv)
 {
+    // outpout argv[0] to stdout
+    const char *s;
+    // print all args
+    for (int i = 0; i < argc; i++) {
+        s = JS_ToCString(ctx, argv[i]);
+        if (s) {
+            printf("args[%d] is %s\n", i, s);
+            JS_FreeCString(ctx, s);
+        }
+    }
     return JS_NewString(ctx, "Hello from qjs:hello module!");
 }
 
@@ -4356,12 +4368,14 @@ static const JSCFunctionListEntry js_hello_funcs[] = {
 
 static int js_hello_init(JSContext *ctx, JSModuleDef *m)
 {
+    printf("js_hello_init\n");
     return JS_SetModuleExportList(ctx, m, js_hello_funcs,
                                   countof(js_hello_funcs));
 }
 
 JSModuleDef *js_init_module_qjs_hello(JSContext *ctx, const char *module_name)
 {
+     printf("js_init_module_qjs_hello\n");
     JSModuleDef *m;
     m = JS_NewCModule(ctx, module_name, js_hello_init);
     if (!m)
@@ -4369,3 +4383,80 @@ JSModuleDef *js_init_module_qjs_hello(JSContext *ctx, const char *module_name)
     JS_AddModuleExportList(ctx, m, js_hello_funcs, countof(js_hello_funcs));
     return m;
 }
+
+
+struct MemoryStruct {
+    char *memory;
+    size_t size;
+};
+
+
+// curl
+
+static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    size_t realsize = size * nmemb;
+    struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+    
+    char *ptr = realloc(mem->memory, mem->size + realsize + 1);
+    mem->memory = ptr;
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+    
+    return realsize;
+}
+
+static JSValue js_curl_get(JSContext *ctx, JSValueConst this_val,
+                          int argc, JSValueConst *argv)
+{
+    if (argc < 1)
+        return JS_EXCEPTION;
+        
+    const char *url = JS_ToCString(ctx, argv[0]);
+    if (!url)
+        return JS_EXCEPTION;
+
+    CURL *curl = curl_easy_init();
+    struct MemoryStruct chunk = {0};
+    chunk.memory = malloc(1);
+    
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+    JS_FreeCString(ctx, url);
+    
+    if (res != CURLE_OK)
+        return JS_EXCEPTION;
+        
+    JSValue response = JS_NewString(ctx, chunk.memory);
+    free(chunk.memory);
+    return response;
+}
+
+static const JSCFunctionListEntry js_fetch_funcs[] = {
+    JS_CFUNC_DEF("get", 1, js_curl_get),
+};
+
+
+static int js_fetch_init(JSContext *ctx, JSModuleDef *m)
+{
+    printf("js_curl_init\n");
+    return JS_SetModuleExportList(ctx, m, js_fetch_funcs,
+                                  countof(js_fetch_funcs));
+}
+
+JSModuleDef *js_init_module_qjs_fetch(JSContext *ctx, const char *module_name)
+{
+     printf("js_init_module_qjs_fetch\n");
+    JSModuleDef *m;
+    m = JS_NewCModule(ctx, module_name, js_fetch_init);
+    if (!m)
+        return NULL;
+    JS_AddModuleExportList(ctx, m, js_fetch_funcs, countof(js_fetch_funcs));
+    return m;
+}
+
